@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+/Data/Glove/
+/Data/Word2Vec/
