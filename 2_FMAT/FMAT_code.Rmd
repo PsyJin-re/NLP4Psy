@@ -1,0 +1,445 @@
+---
+title: "Examples for FMAT code"
+author: "Yuqing Jin 金昱清"
+date: "2024-12-13"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    code_download: true
+    anchor_sections: true
+    highlight: pygments
+---
+
+```{=html}
+<style type="text/css">
+  body { font-family: "Source Sans Pro", "Arial", sans-serif;
+         font-size: 14px; color: #000; }
+  code { font-family: "Consolas", monospace; }
+  pre code span.do { font-style: normal; font-weight: bold; }
+  pre code span.co { font-style: normal; color: #999; }
+  pre code span.fu { color: #8959a8; }
+  #header { text-align: center; }
+  h1, h2, h3 { font-weight: bold; }
+  h1.title { font-size: 34px; }
+  h1 { font-size: 32px; }
+  h2 { font-size: 28px; }
+  h3 { font-size: 24px; }
+  h4 { font-size: 20px; }
+  #TOC li { font-size: 18px; line-height: 1.25; }
+  p, li, button span { font-size: 16px; }
+  .table { table-layout: fixed; width: auto; margin: 1em auto; }
+  .table { border-top: 1px solid #111; border-bottom: 1px solid #111; }
+  .table thead { background-color: #f0f0f0; }
+  .table tr.even { background-color: #f5f5f5; }
+  .table thead tr th { border-bottom-width: 0px; line-height: 1.2; }
+  .table tbody tr td { border-top-width: 0px; line-height: 1.2; }
+</style>
+```
+```{r Config, include=FALSE}
+options(
+  knitr.kable.NA = "",
+  digits = 4
+)
+knitr::opts_chunk$set(
+  comment = "",
+  fig.align = "center", 
+  fig.width = 6,
+  fig.height = 4,
+  dpi = 500
+)
+```
+
+## 简介
+
+<br>
+本部分代码主要介绍Fill-Mask Association Test(FMAT)在R中的实现
+<br>
+<br>
+**Reference:**<br>
+Bao, H-W-S. (2024). The Fill-Mask Association Test(FMAT): Measuring propositions in Natural Language. *Journal of Personality and Social Psychology*, *127*(3), 537--561. https://doi.org/10.1037/pspa0000396
+<br>
+<br>
+Bao, H.-W.-S. (2023). FMAT: The Fill-Mask Association Test. https://CRAN.R-project.org/package=FMAT
+<br>
+<br>
+
+## 1. 环境配置与BERT模型下载
+
+<br>
+**第一步**：安装Python的Anaconda编译器并进行环境配置
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics("../Pictures/2.png")
+```
+<br>
+**第二步**：配置R, Python, Anaconda的环境变量<br>
+具体操作方式可见：https://blog.csdn.net/wangpaiblog/article/details/113532591
+<br>
+<br>
+**第三步**：在"Rstuio--Tools--Global Options"选择Anaconda作为Python编译器
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics("../Pictures/3.png")
+```
+
+<br>
+**第四步**："win+r"打开cmd，激活Anaconda环境
+```{bash eval=FALSE}
+conda list ##查看anaconda环境，一般有base
+conda activate base ##激活anaconda环境，即可安装指定Python包
+```
+<br>
+输入下方代码，安装指定版本的python包
+```{bash eval=FALSE}
+pip install transformers==4.40.2 torch==2.2.1 huggingface-hub==0.20.3
+```
+<br>
+**第五步**：在Rstudio中安装BERT模型
+```{r eval=FALSE}
+install.packages("FMAT")
+library(FMAT)
+
+##选择要下载的BERT模型，可根据实际研究需求更改
+models = c("bert-base-uncased",
+           "bert-base-cased",
+           "bert-large-uncased",
+           "bert-large-cased",
+           "distilbert-base-uncased",
+           "distilbert-base-cased",
+           "albert-base-v1",
+           "albert-base-v2",
+           "roberta-base",
+           "distilroberta-base",
+           "vinai/bertweet-base",
+           "vinai/bertweet-large")
+
+##BERT模型下载，下载路径为C：/Users/%Username%/.cache/huggingface
+BERT_download(models)
+```
+<br>
+BERT模型下载速度可能很慢，可以通过更改R镜像的方式加速：<br>
+RStudio--Tools--Global Options--Packages--Change 选择中国以外的镜像即可<br>
+如仍然较慢，可以选择科学上网
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics("../Pictures/4.png")
+```
+
+<br>
+
+## 2. FMAT示例：只用4个基础BERT模型
+
+```{r echo=FALSE}
+##上一段代码只展示不运行，这边补一下
+models = c("bert-base-uncased",
+           "bert-base-cased",
+           "bert-large-uncased",
+           "bert-large-cased",
+           "distilbert-base-uncased",
+           "distilbert-base-cased",
+           "albert-base-v1",
+           "albert-base-v2",
+           "roberta-base",
+           "distilroberta-base",
+           "vinai/bertweet-base",
+           "vinai/bertweet-large")
+```
+<br>
+安装并加载必要的R包
+```{r echo=TRUE}
+#Pacman
+if (!requireNamespace('pacman', quietly = TRUE)) {
+    install.packages('pacman')
+}
+
+#Core
+pacman::p_load(FMAT)
+
+#General
+pacman::p_load(bruceR,tidyverse)
+
+#Specific
+pacman::p_load(irr,nlme,knitr,ggrepel,zoo,see,cowplot,sjPlot)
+```
+<br>
+数据预处理
+```{r echo=TRUE}
+##数据预处理
+words <- import("../Data/FMAT_words/words.csv")
+
+process_column <- function(column){
+  column <- column[column != ""]
+  return(column)
+}
+
+subjects <- process_column(words$Subjects)
+A1_inter <- process_column(words$A1_inter) %>%
+  tolower()
+A2_bor <- process_column(words$A2_bor) %>%
+  tolower()
+A3_useful <- process_column(words$A3_useful) %>%
+  tolower()
+A4_useless <- process_column(words$A4_useless) %>%
+  tolower()
+
+words <- list(subjects=subjects,
+              A1_int = A1_inter,
+              A2_bor = A2_bor,
+              A3_usef = A3_useful,
+              A4_usel = A4_useless)
+
+remove(A1_inter,A2_bor,A3_useful,A4_useless,subjects)
+```
+<br>
+FMAT的代码，设计两个不同的命题：<br>
+Query 1: {TARGET} is [MASK].<br>
+Query 2: Most people think {TARGET} is [MASK].
+```{r echo=TRUE}
+
+#Query for interesting/boring
+Query_Int = FMAT_query_bind(
+  FMAT_query("{TARGET} is [MASK].",
+             MASK = .(interesting = words$A1_int, boring = words$A2_bor),
+             TARGET = .(subject = words$subjects)
+  ),
+  FMAT_query("Most people think {TARGET} is [MASK].",
+             MASK = .(interesting = words$A1_int, boring = words$A2_bor),
+             TARGET = .(subject = words$subjects)
+  )
+)
+
+#Query for useful/useless
+Query_Use = FMAT_query_bind(
+  FMAT_query("{TARGET} is [MASK].",
+             MASK = .(useful = words$A3_usef, useless = words$A4_usel),
+             TARGET = .(subject = words$subjects)
+  ),
+  FMAT_query("Most people think {TARGET} is [MASK].",
+             MASK = .(useful = words$A3_usef, useless = words$A4_usel),
+             TARGET = .(subject = words$subjects)
+  )
+)
+```
+<br>
+运行BERT模型进行FMAT分析
+```{r results='hide', warning=FALSE, message=FALSE, fig.show='hide'}
+Result_Int_4mod = FMAT_run(models[1:4], Query_Int)
+Result_Use_4mod = FMAT_run(models[1:4], Query_Use)
+
+Sum_Int_4mod = summary(Result_Int_4mod,
+                       target.pair=FALSE)[,.(model,query,T_word,M_word,LPR)]
+Sum_Use_4mod = summary(Result_Use_4mod,
+                       target.pair=FALSE)[,.(model,query,T_word,M_word,LPR)]
+```
+<br>
+进行ICC计算
+```{r echo=TRUE}
+#ICC计算
+LPR_reliability(Sum_Int_4mod, item="query") %>% kable(digits=2)
+LPR_reliability(Sum_Int_4mod, item="query", by="model") %>% kable(digits=2)
+
+LPR_reliability(Sum_Use_4mod, item="query") %>% kable(digits=2)
+LPR_reliability(Sum_Use_4mod, item="query", by="model") %>% kable(digits=2)
+```
+<br>
+可以绘图
+```{r echo=FALSE}
+#结果数据处理
+result = rbind(Sum_Int_4mod,Sum_Use_4mod)%>%
+         mutate(model = as.numeric(model),query = as.numeric(query)) %>%
+         pivot_wider(names_from = c("model", "query","M_word"),
+                     names_glue = "LPR.M{model}.Q{query}.W{M_word}",
+                     values_from = "LPR") %>%
+         mutate(LPR.Q1.I = MEAN(., vars = paste0("LPR.M",1:4,".Q1.Winteresting - boring")),
+                LPR.Q2.I = MEAN(., vars = paste0("LPR.M",1:4,".Q2.Winteresting - boring"))
+                )%>%
+         mutate(LPR.Q1.U = MEAN(., vars = paste0("LPR.M",1:4,".Q1.Wuseful - useless")),
+                LPR.Q2.U = MEAN(., vars = paste0("LPR.M",1:4,".Q2.Wuseful - useless"))
+                )%>%
+         mutate(LPR.I = MEAN(., vars = paste0("LPR.Q",1:2,".I")),
+                LPR.U = MEAN(., vars = paste0("LPR.Q",1:2,".U"))
+                )%>%
+         as.data.table()%>%
+         mutate(LPR.Q1.I = scale(LPR.Q1.I),
+                LPR.Q2.I = scale(LPR.Q2.I),
+                LPR.Q1.U = scale(LPR.Q1.U),
+                LPR.Q2.U = scale(LPR.Q2.U),
+                LPR.I = scale(LPR.I),
+                LPR.U = scale(LPR.U))
+
+
+```
+
+命题一的结果：{TARGET} is [MASK].
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.show='hold'}
+  ggplot(result, aes(x=LPR.Q1.U, y=LPR.Q1.I)) +
+    geom_point(fill = "#f781bf60", color = "#f781bf60", size=4, shape=21, alpha=0.8, show.legend=FALSE) +
+    geom_smooth(method="lm", color="grey50") +
+    geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
+    annotate("text", x=-1.6, y=2.8, size=4.5, parse=TRUE,
+             label="paste(italic(r), ' = .79***, 95% CI [.58, .90]')")  +
+    annotate("text", x=-2.2, y=2.4, size=4.5, parse=TRUE,
+             label="paste(ICC, ' = .73')") +
+    scale_x_continuous(limits=c(-2.5, 1.8), breaks=seq(-2.5, 1.8, 1)) +
+    scale_y_continuous(limits=c(-1.7, 2.9), breaks=seq(-1.7, 2.9, 1)) +
+    scale_fill_social_c(reverse=TRUE) +
+    labs(x="Usefulness of specific subject",
+         y="Interest of specific subject",
+         title="Use-Interest Subject Association(Q1_4Mod)") +
+    theme_bruce()
+```
+<br>
+命题二的结果：Most people think {TARGET} is [MASK].
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.show='hold'}
+ggplot(result, aes(x=LPR.Q2.U, y=LPR.Q2.I)) +
+    geom_point(fill = "darkslategray1", color = "darkslategray1", size=4, shape=21, alpha=0.8, show.legend=FALSE) +
+    geom_smooth(method="lm", color="grey50") +
+    geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
+    annotate("text", x=-1.4, y=2.5, size=4.5, parse=TRUE,
+             label="paste(italic(r), ' = .23, 95% CI [-.16, .56]')") +
+    annotate("text", x=-1.9, y=2.0, size=4.5, parse=TRUE,
+             label="paste(ICC, ' = .57')") +
+    scale_x_continuous(limits=c(-2.1, 1.7), breaks=seq(-2.1, 1.7, 1)) +
+    scale_y_continuous(limits=c(-1.9, 2.6), breaks=seq(-1.9, 2.6, 1)) +
+    scale_fill_social_c(reverse=TRUE) +
+    labs(x="Usefulness of specific subject",
+         y="Interest of specific subject",
+       title="Use-Interest Subject Association(Q2_4Mod)") +
+    theme_bruce()
+```
+<br>
+
+## 3. FMAT示例：使用12个BERT模型
+
+<br>
+前面都一样我们直接来看结果
+```{r echo=FALSE, results='hide', warning=FALSE, message=FALSE, fig.show='hide'}
+Result_Int_12mod = FMAT_run(models, Query_Int)
+Result_Use_12mod = FMAT_run(models, Query_Use)
+
+Sum_Int_12mod = summary(Result_Int_12mod,
+                       target.pair=FALSE)[,.(model,query,T_word,M_word,LPR)]
+Sum_Use_12mod = summary(Result_Use_12mod,
+                       target.pair=FALSE)[,.(model,query,T_word,M_word,LPR)]
+```
+
+```{r echo=TRUE}
+#ICC计算
+LPR_reliability(Sum_Int_12mod, item="query") %>% kable(digits=2)
+LPR_reliability(Sum_Int_12mod, item="query", by="model") %>% kable(digits=2)
+
+LPR_reliability(Sum_Use_12mod, item="query") %>% kable(digits=2)
+LPR_reliability(Sum_Use_12mod, item="query", by="model") %>% kable(digits=2)
+```
+
+```{r echo=FALSE}
+#结果数据处理
+result_12mod = rbind(Sum_Int_12mod,Sum_Use_12mod)%>%
+         mutate(model = as.numeric(model),query = as.numeric(query)) %>%
+         pivot_wider(names_from = c("model", "query","M_word"),
+                     names_glue = "LPR.M{model}.Q{query}.W{M_word}",
+                     values_from = "LPR") %>%
+         mutate(LPR.Q1.I = MEAN(., vars = paste0("LPR.M",1:12,".Q1.Winteresting - boring")),
+                LPR.Q2.I = MEAN(., vars = paste0("LPR.M",1:12,".Q2.Winteresting - boring"))
+                )%>%
+         mutate(LPR.Q1.U = MEAN(., vars = paste0("LPR.M",1:12,".Q1.Wuseful - useless")),
+                LPR.Q2.U = MEAN(., vars = paste0("LPR.M",1:12,".Q2.Wuseful - useless"))
+                )%>%
+         mutate(LPR.I = MEAN(., vars = paste0("LPR.Q",1:2,".I")),
+                LPR.U = MEAN(., vars = paste0("LPR.Q",1:2,".U"))
+                )%>%
+         as.data.table()%>%
+         mutate(LPR.Q1.I = scale(LPR.Q1.I),
+                LPR.Q2.I = scale(LPR.Q2.I),
+                LPR.Q1.U = scale(LPR.Q1.U),
+                LPR.Q2.U = scale(LPR.Q2.U),
+                LPR.I = scale(LPR.I),
+                LPR.U = scale(LPR.U))
+```
+
+<br>
+命题一的结果：{TARGET} is [MASK]
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.show='hold'}
+  ggplot(result_12mod, aes(x=LPR.Q1.U, y=LPR.Q1.I)) +
+    geom_point(fill = "#f781bf60", color = "#f781bf60", size=4, shape=21, alpha=0.8, show.legend=FALSE) +
+    geom_smooth(method="lm", color="grey50") +
+    geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
+    annotate("text", x=-1.8, y=2, size=4.5, parse=TRUE,
+             label="paste(italic(r), ' = .75***, 95% CI [.51, .88]')")  +
+    annotate("text", x=-2.45, y=1.7, size=4.5, parse=TRUE,
+             label="paste(ICC, ' = .79')") +
+    scale_x_continuous(limits=c(-2.7, 1.7), breaks=seq(-2.7, 1.7, 1)) +
+    scale_y_continuous(limits=c(-1.7, 2.1), breaks=seq(-1.7, 2.1, 1)) +
+    scale_fill_social_c(reverse=TRUE) +
+    labs(x="Usefulness of specific subject",
+         y="Interest of specific subject",
+         title="Use-Interest Subject Association(Q1_12Mod)") +
+    theme_bruce()
+```
+<br>
+命题二的结果：Most people think {TARGET} is [MASK].
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.show='hold'}
+ggplot(result_12mod, aes(x=LPR.Q2.U, y=LPR.Q2.I)) +
+    geom_point(fill = "darkslategray1", color = "darkslategray1", size=4, shape=21, alpha=0.8, show.legend=FALSE) +
+    geom_smooth(method="lm", color="grey50") +
+    geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
+    annotate("text", x=-1, y=2, size=4.5, parse=TRUE,
+             label="paste(italic(r), ' = .37, 95% CI [-.02, .66]')") +
+    annotate("text", x=-1.6, y=1.6, size=4.5, parse=TRUE,
+             label="paste(ICC, ' = .62')") +
+    scale_x_continuous(limits=c(-1.9, 2.7), breaks=seq(-1.9, 2.7, 1)) +
+    scale_y_continuous(limits=c(-2.7, 2.1), breaks=seq(-2.7, 2.1, 1)) +
+    scale_fill_social_c(reverse=TRUE) +
+    labs(x="Usefulness of specific subject",
+         y="Interest of specific subject",
+       title="Use-Interest Subject Association(Q2_12Mod)") +
+    theme_bruce()
+```
+<br>
+我们也可以把两个命题的数据合并来看
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.show='hold'}
+ggplot(result_12mod, aes(x=LPR.U, y=LPR.I)) +
+  geom_point(fill = "coral3", color = "coral3", size=4, shape=21, alpha=0.8, show.legend=FALSE) +
+  geom_smooth(method="lm", color="grey50") +
+  geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
+  annotate("text", x=-1.5, y=2.5, size=4.5, parse=TRUE,
+           label="paste(italic(r), ' = .59**, 95% CI [.27, .79]')") +
+  scale_x_continuous(limits=c(-2.6, 2), breaks=seq(-2.6, 2, 1)) +
+  scale_y_continuous(limits=c(-2.5, 2.5), breaks=seq(-2.5, 2.5, 1)) +
+  scale_fill_social_c(reverse=TRUE) +
+  labs(x="Usefulness of specific subject",
+       y="Interest of specific subject",
+       title="Use-Interest Subject Association(12Mod)") +
+  theme_bruce()
+```
+<br>
+
+## 4. 注意事项
+
+<br>
+**关于BERT模型的选取**<br>
+1. 根据研究的主题确定使用的BERT模型<br>
+2. 使用的BERT模型越多越好，12个是基线<br>
+<br>
+
+**关于命题的设计**<br>
+1. 默认命题带有前提："Most people from the corpus think"，避免**嵌套式命题**<br>
+2. 命题最好选择**客观**的事实(e.g. 职位、工作、性别)而非**抽象**的概念(e.g. 有趣/无聊)<br>
+<br>
+
+**关于MASK词的选择**<br>
+1. 比较生僻(Monotonous)以及词根复合词(Unhelpful,ineffective)不建议作为MASK词，BERT模型本身识别不了<br>
+2. 使用GPT或字典拓展MASK词库，可以提升研究结果的稳定性<br>
+<br>
+<br>
+上述代码为学习FMAT后的尝试，如在使用过程中有任何疑问或错误，欢迎提出与指正！
+<br>
+<br>
+**Reference:**<br>
+Bao, H-W-S. (2024). The Fill-Mask Association Test(FMAT): Measuring propositions in Natural Language. *Journal of Personality and Social Psychology*, *127*(3), 537--561. https://doi.org/10.1037/pspa0000396
+<br>
+<br>
+Bao, H.-W.-S. (2023). FMAT: The Fill-Mask Association Test. https://CRAN.R-project.org/package=FMAT
+<br>
+<br>
