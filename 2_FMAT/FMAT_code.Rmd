@@ -279,8 +279,6 @@ result = rbind(Sum_Int_4mod,Sum_Use_4mod)%>%
     geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
     annotate("text", x=-1.6, y=2.8, size=4.5, parse=TRUE,
              label="paste(italic(r), ' = .79***, 95% CI [.58, .90]')")  +
-    annotate("text", x=-2.2, y=2.4, size=4.5, parse=TRUE,
-             label="paste(ICC, ' = .73')") +
     scale_x_continuous(limits=c(-2.5, 1.8), breaks=seq(-2.5, 1.8, 1)) +
     scale_y_continuous(limits=c(-1.7, 2.9), breaks=seq(-1.7, 2.9, 1)) +
     scale_fill_social_c(reverse=TRUE) +
@@ -298,8 +296,6 @@ ggplot(result, aes(x=LPR.Q2.U, y=LPR.Q2.I)) +
     geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
     annotate("text", x=-1.4, y=2.5, size=4.5, parse=TRUE,
              label="paste(italic(r), ' = .23, 95% CI [-.16, .56]')") +
-    annotate("text", x=-1.9, y=2.0, size=4.5, parse=TRUE,
-             label="paste(ICC, ' = .57')") +
     scale_x_continuous(limits=c(-2.1, 1.7), breaks=seq(-2.1, 1.7, 1)) +
     scale_y_continuous(limits=c(-1.9, 2.6), breaks=seq(-1.9, 2.6, 1)) +
     scale_fill_social_c(reverse=TRUE) +
@@ -367,8 +363,6 @@ result_12mod = rbind(Sum_Int_12mod,Sum_Use_12mod)%>%
     geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
     annotate("text", x=-1.8, y=2, size=4.5, parse=TRUE,
              label="paste(italic(r), ' = .75***, 95% CI [.51, .88]')")  +
-    annotate("text", x=-2.45, y=1.7, size=4.5, parse=TRUE,
-             label="paste(ICC, ' = .79')") +
     scale_x_continuous(limits=c(-2.7, 1.7), breaks=seq(-2.7, 1.7, 1)) +
     scale_y_continuous(limits=c(-1.7, 2.1), breaks=seq(-1.7, 2.1, 1)) +
     scale_fill_social_c(reverse=TRUE) +
@@ -386,8 +380,6 @@ ggplot(result_12mod, aes(x=LPR.Q2.U, y=LPR.Q2.I)) +
     geom_text_repel(aes(label=T_word), size=2.8, seed=1, max.overlaps=20) +
     annotate("text", x=-1, y=2, size=4.5, parse=TRUE,
              label="paste(italic(r), ' = .37, 95% CI [-.02, .66]')") +
-    annotate("text", x=-1.6, y=1.6, size=4.5, parse=TRUE,
-             label="paste(ICC, ' = .62')") +
     scale_x_continuous(limits=c(-1.9, 2.7), breaks=seq(-1.9, 2.7, 1)) +
     scale_y_continuous(limits=c(-2.7, 2.1), breaks=seq(-2.7, 2.1, 1)) +
     scale_fill_social_c(reverse=TRUE) +
